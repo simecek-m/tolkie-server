@@ -2,5 +2,15 @@
 	"name": "tolkie-server",
 	"version": "1.0.0",
 	"main": "server.js",
-	"license": "MIT"
+	"license": "MIT",
+	"dependencies": {
+		"socket.io": "^2.3.0"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.4"
+	},
+	"scripts": {
+		"dev": "nodemon server",
+		"start": "node server"
+	}
 }
