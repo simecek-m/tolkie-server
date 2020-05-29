@@ -4,6 +4,7 @@
 	"main": "server.js",
 	"license": "MIT",
 	"dependencies": {
+		"jsonwebtoken": "^8.5.1",
 		"socket.io": "^2.3.0",
 		"socketio-jwt": "^4.6.0"
 	},
