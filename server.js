@@ -10,6 +10,8 @@ firebase.initializeApp({
   databaseURL: "https://tolkie-dcedc.firebaseio.com"
 });
 
+const db = firebase.firestore();
+
 io.use(async (socket, next) => {
   const token = socket.handshake.query.token;
   if (token == null) {
@@ -17,6 +19,7 @@ io.use(async (socket, next) => {
   } else {
     try {
       const user = await firebase.auth().verifyIdToken(token);
+      socket.userId = user.uid;
       console.log(`${user.email} authenticated!`);
       next()
     } catch (error) {
@@ -27,6 +30,18 @@ io.use(async (socket, next) => {
 
 io.on("connection", async (client) => {
   console.log(`client ${client.id} connected`);
+
+  client.on("friend-requests", () => {
+    db.collection("friend_requests").where("to", "==", client.userId)
+      .get()
+      .then(snapshot => {
+        const data = snapshot.docs.map(doc => doc.data())
+        client.emit("friend-requests", data)
+      })
+      .catch(error => {
+        console.log(error)
+      })
+  })
 
   client.on("disconnect", () => {
     console.log(`client ${client.id} disconnected`);
