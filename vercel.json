@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "tolkie",
+  "builds": [
+    {
+      "src": "*.js",
+      "use": "@now/node"
+    }
+  ]
+}
