@@ -1,9 +1,11 @@
 const server = require("http").createServer();
 const io = require("socket.io")(server);
 const firebase = require("firebase-admin");
+require("dotenv").config()
 
-// you need to generate new firebase service key and copy it to root folder
-var serviceAccount = require("./tolkie-service-account-key.json");
+// firebase service account is base64 encoded and load as environment variable
+const serviceAccountBase64 = Buffer.from(process.env.googleServiceAccount, "base64");
+const serviceAccount = JSON.parse(serviceAccountBase64.toString())
 
 firebase.initializeApp({
   credential: firebase.credential.cert(serviceAccount),
