@@ -1,11 +1,14 @@
 const server = require("http").createServer();
 const io = require("socket.io")(server);
 const firebase = require("firebase-admin");
-require("dotenv").config()
+require("dotenv").config();
 
 // firebase service account is base64 encoded and load as environment variable
-const serviceAccountBase64 = Buffer.from(process.env.googleServiceAccount, "base64");
-const serviceAccount = JSON.parse(serviceAccountBase64.toString())
+const serviceAccountBase64 = Buffer.from(
+  process.env.GOOGLE_SERVICE_ACCOUNT,
+  "base64"
+);
+const serviceAccount = JSON.parse(serviceAccountBase64.toString());
 
 firebase.initializeApp({
   credential: firebase.credential.cert(serviceAccount),
@@ -60,4 +63,6 @@ io.on("connection", async (client) => {
   });
 });
 
-server.listen(8080);
+server.listen(process.env.PORT, () => {
+  console.log(`Application is running on port ${process.env.PORT}`);
+});
