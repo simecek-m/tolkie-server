@@ -50,7 +50,11 @@ io.on("connection", async (client) => {
           .where(firebase.firestore.FieldPath.documentId(), "in", usersBy)
           .get()
           .then((snapshot) => {
-            const result = snapshot.docs.map((doc) => doc.data());
+            const result = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data()
+            })
+          );
             client.emit("friend-requests", result);
           })
           .catch((error) => {
