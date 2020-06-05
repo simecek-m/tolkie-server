@@ -46,7 +46,8 @@ io.on("connection", async (client) => {
       .get()
       .then((snapshot) => {
         const usersBy = snapshot.docs.map((doc) => doc.data().by);
-        db.collection("users")
+        if(usersBy.length > 0) {
+          db.collection("users")
           .where(firebase.firestore.FieldPath.documentId(), "in", usersBy)
           .get()
           .then((snapshot) => {
@@ -60,10 +61,25 @@ io.on("connection", async (client) => {
           .catch((error) => {
             logger.error("Error while reading data from users collection", error);
           });
+        } else {
+          logger.info(`No friend request for user ${client.id} was found!`)
+        }
+     })
+     .catch((error) => {
+      logger.error("Error while reading data from friend_requests collection", error);
+    });
+        
+  });
+
+  client.on("reject-friend-request", byUserId => {
+    logger.info(`user ${client.userId} rejected friend request by: ${byUserId}`)
+    db.collection("friend_requests")
+      .where("to", "==", client.userId)
+      .where("by", "==", byUserId)
+      .get()
+      .then(snapshot => {
+        snapshot.docs.forEach(doc => doc.ref.delete())
       })
-      .catch((error) => {
-        logger.error("Error while reading data from friend_requests collection", error);
-      });
   });
 
   client.on("disconnect", () => {
