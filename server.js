@@ -71,6 +71,30 @@ io.on("connection", async (client) => {
         
   });
 
+  client.on("accept-friend-request", async byUserId => {
+    logger.info(`user ${client.userId} accepted friend request by: ${byUserId}`)
+    try {
+      const clientRef = db.collection("users").doc(client.userId)
+      const personRef = db.collection("users").doc(byUserId)
+      clientRef.update({
+        friends: firebase.firestore.FieldValue.arrayUnion(byUserId)
+      })
+      personRef.update({
+        friends: firebase.firestore.FieldValue.arrayUnion(client.userId)
+      })
+      db.collection("friend_requests")
+      .where("to", "==", client.userId)
+      .where("by", "==", byUserId)
+      .get()
+      .then(snapshot => {
+        snapshot.docs.forEach(doc => doc.ref.delete())
+      })
+    } catch(error) {
+      logger.error("Error while accepting friend request", error)
+    }
+    
+  });
+
   client.on("reject-friend-request", byUserId => {
     logger.info(`user ${client.userId} rejected friend request by: ${byUserId}`)
     db.collection("friend_requests")
