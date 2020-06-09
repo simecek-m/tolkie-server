@@ -83,12 +83,12 @@ io.on("connection", async (client) => {
         friends: firebase.firestore.FieldValue.arrayUnion(client.userId)
       })
       db.collection("friend_requests")
-      .where("to", "==", client.userId)
-      .where("by", "==", byUserId)
-      .get()
-      .then(snapshot => {
-        snapshot.docs.forEach(doc => doc.ref.delete())
-      })
+        .where("to", "==", client.userId)
+        .where("by", "==", byUserId)
+        .get()
+        .then(snapshot => {
+          snapshot.docs.forEach(doc => doc.ref.delete())
+        })
     } catch(error) {
       logger.error("Error while accepting friend request", error)
     }
@@ -105,6 +105,24 @@ io.on("connection", async (client) => {
         snapshot.docs.forEach(doc => doc.ref.delete())
       })
   });
+
+  client.on("get-friend-list", async () => {
+    logger.info(`user ${client.userId} friend list event triggered`);
+    const userRef = await db.collection("users").doc(client.userId).get()
+    const friendIds = userRef.data().friends
+
+    db.collection("users")
+      .where(firebase.firestore.FieldPath.documentId(), "in", friendIds)
+      .orderBy(firebase.firestore.FieldPath.documentId())
+      .get()
+      .then((snapshot) => {
+        const result = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        client.emit("friend-list", result);
+      })
+  })
 
   client.on("disconnect", () => {
     logger.info(`client ${client.id} disconnected`);
