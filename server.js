@@ -40,7 +40,7 @@ io.use(async (socket, next) => {
 io.on("connection", async (client) => {
   logger.info(`client ${client.id} connected`);
 
-  client.on("friend-requests", () => {
+  client.on("get-friend-requests", () => {
     db.collection("friend_requests")
       .where("to", "==", client.userId)
       .get()
