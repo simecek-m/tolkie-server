@@ -116,13 +116,34 @@ io.on("connection", async (client) => {
       .orderBy(firebase.firestore.FieldPath.documentId())
       .get()
       .then((snapshot) => {
-        const result = snapshot.docs.map((doc) => ({
+        const result = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
         client.emit("friend-list", result);
       })
-  })
+  });
+
+  client.on("get-chats", async() => {
+    const chatsRef = await db.collection("chats").where("participants", "array-contains", client.userId).get();
+    const result = await Promise.all(chatsRef.docs.map(async doc => {
+      let participants = await Promise.all(doc.data().participants.filter(user => user != client.userId).map(async participant => {
+        if(participant != client.userId) {
+          const user = await db.collection("users").doc(participant).get()
+          return user.data()
+        }
+      }))
+      const messagesRef = await doc.ref.collection("messages").limit(20).orderBy("timestamp", "desc").get()
+      const messages = messagesRef.docs.map(message => message.data());
+      return {
+        id: doc.id,
+        ...doc.data(),
+        participants,
+        messages
+      }
+    }));
+    client.emit("chats", result)
+  });
 
   client.on("disconnect", () => {
     logger.info(`client ${client.id} disconnected`);
