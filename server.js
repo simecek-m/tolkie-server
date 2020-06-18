@@ -133,6 +133,7 @@ io.on("connection", async (client) => {
           return user.data()
         }
       }))
+      participants = participants.filter(participant => participant != null && participant != undefined)
       const messagesRef = await doc.ref.collection("messages").limit(20).orderBy("timestamp", "asc").get()
       const messages = messagesRef.docs.map(message => message.data());
       return {
