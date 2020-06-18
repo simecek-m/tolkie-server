@@ -127,10 +127,11 @@ io.on("connection", async (client) => {
   client.on("get-chats", async() => {
     const chatsRef = await db.collection("chats").where("participants", "array-contains", client.userId).get();
     const result = await Promise.all(chatsRef.docs.map(async doc => {
-      let participants = await Promise.all(doc.data().participants.filter(user => user != client.userId).map(async participant => {
-        if(participant != client.userId) {
-          const user = await db.collection("users").doc(participant).get()
-          return user.data()
+      let participants = await Promise.all(doc.data().participants.filter(user => user != client.userId).map(async participantId => {
+        const user = await db.collection("users").doc(participantId).get()
+        return {
+          id: participantId,
+          ...user.data()
         }
       }))
       participants = participants.filter(participant => participant != null && participant != undefined)
