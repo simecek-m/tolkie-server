@@ -147,6 +147,26 @@ io.on("connection", async (client) => {
     client.emit("chats", result)
   });
 
+  client.on("create-new-chat-room", async (userId) => {
+    const docRef = await db.collection("chats").add({
+      participants: [client.userId, userId],
+      updated: new Date().getTime()
+    });
+    const doc = await docRef.get()
+    const chat = {
+      id: doc.id,
+      ...doc.data(),
+      messages: []
+    };
+    const filteredParticipants = await Promise.all(chat.participants.filter(user => user != client.userId).map(async participant => {
+      const user = await db.collection("users").doc(participant).get()
+      return user.data()
+    }))
+    chat.participants = filteredParticipants
+    client.emit("new-chat-room", chat)
+  });
+
+
   client.on("disconnect", () => {
     logger.info(`client ${client.id} disconnected`);
   });
