@@ -133,7 +133,7 @@ io.on("connection", async (client) => {
           return user.data()
         }
       }))
-      const messagesRef = await doc.ref.collection("messages").limit(20).orderBy("timestamp", "desc").get()
+      const messagesRef = await doc.ref.collection("messages").limit(20).orderBy("timestamp", "asc").get()
       const messages = messagesRef.docs.map(message => message.data());
       return {
         id: doc.id,
