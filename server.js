@@ -166,6 +166,10 @@ io.on("connection", async (client) => {
     client.emit("new-chat-room", chat)
   });
 
+  client.on("send-message", async(chatId, message) => {
+    const chatRef = await db.collection("chats").doc(chatId)
+    chatRef.collection("messages").add(message)
+  });
 
   client.on("disconnect", () => {
     logger.info(`client ${client.id} disconnected`);
