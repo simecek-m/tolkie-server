@@ -40,7 +40,7 @@ io.use(async (socket, next) => {
 io.on("connection", async (client) => {
   logger.info(`client ${client.id} connected`);
 
-  client.on("friend-requests", () => {
+  client.on("get-friend-requests", () => {
     db.collection("friend_requests")
       .where("to", "==", client.userId)
       .get()
@@ -71,6 +71,30 @@ io.on("connection", async (client) => {
         
   });
 
+  client.on("accept-friend-request", async byUserId => {
+    logger.info(`user ${client.userId} accepted friend request by: ${byUserId}`)
+    try {
+      const clientRef = db.collection("users").doc(client.userId)
+      const personRef = db.collection("users").doc(byUserId)
+      clientRef.update({
+        friends: firebase.firestore.FieldValue.arrayUnion(byUserId)
+      })
+      personRef.update({
+        friends: firebase.firestore.FieldValue.arrayUnion(client.userId)
+      })
+      db.collection("friend_requests")
+        .where("to", "==", client.userId)
+        .where("by", "==", byUserId)
+        .get()
+        .then(snapshot => {
+          snapshot.docs.forEach(doc => doc.ref.delete())
+        })
+    } catch(error) {
+      logger.error("Error while accepting friend request", error)
+    }
+    
+  });
+
   client.on("reject-friend-request", byUserId => {
     logger.info(`user ${client.userId} rejected friend request by: ${byUserId}`)
     db.collection("friend_requests")
@@ -80,6 +104,71 @@ io.on("connection", async (client) => {
       .then(snapshot => {
         snapshot.docs.forEach(doc => doc.ref.delete())
       })
+  });
+
+  client.on("get-friend-list", async () => {
+    logger.info(`user ${client.userId} friend list event triggered`);
+    const userRef = await db.collection("users").doc(client.userId).get()
+    const friendIds = userRef.data().friends
+
+    db.collection("users")
+      .where(firebase.firestore.FieldPath.documentId(), "in", friendIds)
+      .orderBy(firebase.firestore.FieldPath.documentId())
+      .get()
+      .then((snapshot) => {
+        const result = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        client.emit("friend-list", result);
+      })
+  });
+
+  client.on("get-chats", async() => {
+    const chatsRef = await db.collection("chats").where("participants", "array-contains", client.userId).get();
+    const result = await Promise.all(chatsRef.docs.map(async doc => {
+      let participants = await Promise.all(doc.data().participants.filter(user => user != client.userId).map(async participantId => {
+        const user = await db.collection("users").doc(participantId).get()
+        return {
+          id: participantId,
+          ...user.data()
+        }
+      }))
+      participants = participants.filter(participant => participant != null && participant != undefined)
+      const messagesRef = await doc.ref.collection("messages").limit(20).orderBy("timestamp", "asc").get()
+      const messages = messagesRef.docs.map(message => message.data());
+      return {
+        id: doc.id,
+        ...doc.data(),
+        participants,
+        messages
+      }
+    }));
+    client.emit("chats", result)
+  });
+
+  client.on("create-new-chat-room", async (userId) => {
+    const docRef = await db.collection("chats").add({
+      participants: [client.userId, userId],
+      updated: new Date().getTime()
+    });
+    const doc = await docRef.get()
+    const chat = {
+      id: doc.id,
+      ...doc.data(),
+      messages: []
+    };
+    const filteredParticipants = await Promise.all(chat.participants.filter(user => user != client.userId).map(async participant => {
+      const user = await db.collection("users").doc(participant).get()
+      return user.data()
+    }))
+    chat.participants = filteredParticipants
+    client.emit("new-chat-room", chat)
+  });
+
+  client.on("send-message", async(chatId, message) => {
+    const chatRef = await db.collection("chats").doc(chatId)
+    chatRef.collection("messages").add(message)
   });
 
   client.on("disconnect", () => {
